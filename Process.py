@@ -3,6 +3,9 @@ import numpy as np
 from logging import StreamHandler, DEBUG, Formatter, FileHandler, getLogger
 logger = getLogger(__name__)
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedKFold
+from sklearn.metrics import log_loss, roc_auc_score
+
 from LoadDate import loadTrainData, loadTestData
 
 LogDir = 'logs/'
@@ -40,6 +43,30 @@ if __name__ == '__main__':
     useCols = xTrain.columns.values
     logger.info('train columns: {} {}'.format(useCols.shape, useCols))
     logger.info('Traning data preparation end.')
+
+    # クロスバリデーション
+    listAucScore = []
+    listLoglossScore = []
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+    for trainIdx, validIdx in cv.split(xTrain, yTrain):
+        trn_x = xTrain.iloc[trainIdx, :]
+        val_x = xTrain.iloc[validIdx, :]
+
+        trn_y = yTrain[trainIdx]
+        val_y = yTrain[validIdx]
+
+        clf = LogisticRegression(random_state=0)
+        clf.fit(trn_x, trn_y)
+
+        pred = clf.predict_proba(val_x)[:, 1]
+        scLogloss = log_loss(val_y, pred)
+        scAuc = roc_auc_score(val_y, pred)
+
+        listAucScore.append(scAuc)
+        listLoglossScore.append(scLogloss)
+        logger.info('logloss: {}, auc: {}'.format(scLogloss, scAuc))
+
+    logger.info('logloss: {}, auc: {}'.format(np.mean(listLoglossScore), np.mean(listAucScore)))
 
     # モデル作成・予測
     logger.info('data training start.')
