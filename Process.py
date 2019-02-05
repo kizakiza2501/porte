@@ -48,10 +48,12 @@ if __name__ == '__main__':
     # クロスバリデーション
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
     # パラメータサーチ
+    # すべてのパラメータを記載して、GridprameterSearchにかける
     allParam = {
                 'C': [10**i for i in range(-1, 2)],
                 'fit_intercept': [True, False],
-                'random_state': [0],
+                'penalty': ['l2', 'l1'],
+                'random_state': [0]
                }
 
     minScore = 100
@@ -62,28 +64,41 @@ if __name__ == '__main__':
 
         listAucScore = []
         listLoglossScore = []
+        # トレーニングデータと検証用データに分割する
         for trainIdx, validIdx in cv.split(xTrain, yTrain):
+            # インデックスが返ってくるため、ilocで行を特定する
+            # トレーニング用
             trn_x = xTrain.iloc[trainIdx, :]
+            # 検証用
             val_x = xTrain.iloc[validIdx, :]
 
+            # トレーニング用
             trn_y = yTrain[trainIdx]
+            # 検証用
             val_y = yTrain[validIdx]
 
+            # **変数名で、キーワードargsとして渡せる
             clf = LogisticRegression(**params)
+            # トレーニングデータでモデル作成
             clf.fit(trn_x, trn_y)
 
+            # 検証用データで予測する
             pred = clf.predict_proba(val_x)[:, 1]
+            # 検証用データのYと突き合わせ
             scLogloss = log_loss(val_y, pred)
-            scAuc = -(roc_auc_score(val_y, pred))
+            scAuc = roc_auc_score(val_y, pred)
 
             listAucScore.append(scAuc)
             listLoglossScore.append(scLogloss)
             logger.info('logloss: {}, auc: {}'.format(scLogloss, scAuc))
 
+        # 各検証結果の平均値を算出
+        # auc を小さいほうに合わせて、マイナス符号をつける
         scLogloss = np.mean(listLoglossScore)
         scAuc = - np.mean(listAucScore)
         logger.info('logloss: {}, auc: {}'.format(np.mean(listLoglossScore), np.mean(listAucScore)))
 
+        # aucが小さければ、パラメータを更新する
         if minScore > scAuc:
             minScore = scAuc
             minParams = params
@@ -93,7 +108,7 @@ if __name__ == '__main__':
 
     # モデル作成・予測
     logger.info('data training start.')
-    clf = LogisticRegression(random_state=0)
+    clf = LogisticRegression(**minParams)
     clf.fit(xTrain, yTrain)
     logger.info('data training end.')
 
