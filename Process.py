@@ -14,6 +14,25 @@ SubmitDir = 'data/'
 SampleSubmitFile = SubmitDir + 'sample_submission.csv'
 
 
+def eval_gini(y_true, y_prob):
+    '''
+    gini係数を計算する関数
+    '''
+    y_true = np.asarray(y_true)
+    y_true = y_true[np.argsort(y_prob)]
+    ntrue = 0
+    gini = 0
+    delta = 0
+    n = len(y_true)
+    for i in range(n-1, -1, -1):
+        y_i = y_true[i]
+        ntrue += y_i
+        gini += y_i * delta
+        delta += 1 - y_i
+    gini = 1 - 2 * gini / (ntrue * (n - ntrue))
+    return gini
+
+
 if __name__ == '__main__':
 
     # ロガーの設定
@@ -62,7 +81,7 @@ if __name__ == '__main__':
     for params in tqdm(list(ParameterGrid(allParam))):
         logger.info('params: {}'.format(params))
 
-        listAucScore = []
+        listGiniScore = []
         listLoglossScore = []
         # トレーニングデータと検証用データに分割する
         for trainIdx, validIdx in cv.split(xTrain, yTrain):
@@ -86,25 +105,26 @@ if __name__ == '__main__':
             pred = clf.predict_proba(val_x)[:, 1]
             # 検証用データのYと突き合わせ
             scLogloss = log_loss(val_y, pred)
-            scAuc = roc_auc_score(val_y, pred)
+            scGini = eval_gini(val_y, pred)
 
-            listAucScore.append(scAuc)
+            listGiniScore.append(scGini)
             listLoglossScore.append(scLogloss)
-            logger.info('logloss: {}, auc: {}'.format(scLogloss, scAuc))
+            logger.info('logloss: {}, gini: {}'.format(scLogloss, scGini))
 
         # 各検証結果の平均値を算出
-        # auc を小さいほうに合わせて、マイナス符号をつける
+        # gini を小さいほうに合わせて、マイナス符号をつける
         scLogloss = np.mean(listLoglossScore)
-        scAuc = - np.mean(listAucScore)
-        logger.info('logloss: {}, auc: {}'.format(np.mean(listLoglossScore), np.mean(listAucScore)))
+        scGini = - np.mean(listGiniScore)
+        logger.info('logloss: {}, gini: {}'.format(np.mean(listLoglossScore), np.mean(listGiniScore)))
 
-        # aucが小さければ、パラメータを更新する
-        if minScore > scAuc:
-            minScore = scAuc
+        # giniが小さければ、パラメータを更新する
+        if minScore > scGini:
+            minScore = scGini
             minParams = params
+            logger.info('Update params: {}'.format(minParams))
 
-    logger.info('minimum params: {}'.format(minParams))
-    logger.info('minimum auc: {}'.format(minScore))
+    logger.info('Eventually minimum params: {}'.format(minParams))
+    logger.info('Eventually minimum gini: {}'.format(minScore))
 
     # モデル作成・予測
     logger.info('data training start.')
