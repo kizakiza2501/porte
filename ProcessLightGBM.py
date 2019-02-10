@@ -71,11 +71,17 @@ if __name__ == '__main__':
         # パラメータサーチ
         # すべてのパラメータを記載して、GridprameterSearchにかける
         allParam = {
-                    'learning_rate': [ 0.1],
-                    'num_leaves': [31],
-                    'boosting_type' : ['gbdt'],
-                    'objective' : ['binary']
-                   }
+            'learning_rate': [0.005],
+            'n_estimators': [40],
+            'num_leaves': [6,8,12,16],
+            'boosting_type' : ['gbdt'],
+            'objective' : ['binary'],
+            'random_state' : [501], # Updated from 'seed'
+            'colsample_bytree' : [0.65, 0.66],
+            'subsample' : [0.7,0.75],
+            'reg_alpha' : [1,1.2],
+            'reg_lambda' : [1,1.2,1.4],
+            }
 
         minScore = 100
         minParams = None
@@ -83,8 +89,7 @@ if __name__ == '__main__':
         for params in list(ParameterGrid(allParam)):
             logger.info('params: {}'.format(params))
 
-            # listGiniScore = []
-            listAucScore = []
+            listGiniScore = []
             listLoglossScore = []
             # トレーニングデータと検証用データに分割する
             for trainIdx, validIdx in cv.split(xTrain, yTrain):
@@ -108,26 +113,27 @@ if __name__ == '__main__':
                 pred = clf.predict_proba(val_x)[:, 1]
                 # 検証用データのYと突き合わせ
                 scLogloss = log_loss(val_y, pred)
-                scAuc = roc_auc_score(val_y, pred)
+                # gini を小さいほうに合わせて、マイナス符号をつける
+                scGini = - eval_gini(val_y, pred)
 
-                listAucScore.append(scAuc)
+                # listAucScore.append(scAuc)
+                listGiniScore.append(scGini)
                 listLoglossScore.append(scLogloss)
-                logger.info('logloss: {}, auc: {}'.format(scLogloss, scAuc))
+                logger.info('logloss: {}, gini: {}'.format(scLogloss, scGini))
 
             # 各検証結果の平均値を算出
-            # auc を小さいほうに合わせて、マイナス符号をつける
             scLogloss = np.mean(listLoglossScore)
-            scAuc = - np.mean(listAucScore)
-            logger.info('logloss: {}, auc: {}'.format(np.mean(listLoglossScore), np.mean(listAucScore)))
+            scGini = np.mean(listGiniScore)
+            logger.info('logloss: {}, gini: {}'.format(np.mean(listLoglossScore), np.mean(listGiniScore)))
 
-            # aucが小さければ、パラメータを更新する
-            if minScore > scAuc:
-                minScore = scAuc
+            # giniが小さければ、パラメータを更新する
+            if minScore > scGini:
+                minScore = scGini
                 minParams = params
                 logger.info('Update params: {}'.format(minParams))
 
         logger.info('Eventually minimum params: {}'.format(minParams))
-        logger.info('Eventually minimum auc: {}'.format(minScore))
+        logger.info('Eventually minimum gini: {}'.format(minScore))
 
         # モデル作成・予測
         logger.info('data training start.')
