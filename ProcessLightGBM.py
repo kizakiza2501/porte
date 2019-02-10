@@ -73,14 +73,14 @@ if __name__ == '__main__':
         allParam = {
             'learning_rate': [0.005],
             'n_estimators': [40],
-            'num_leaves': [6,8,12,16],
-            'boosting_type' : ['gbdt'],
-            'objective' : ['binary'],
-            'random_state' : [501], # Updated from 'seed'
-            'colsample_bytree' : [0.65, 0.66],
-            'subsample' : [0.7,0.75],
-            'reg_alpha' : [1,1.2],
-            'reg_lambda' : [1,1.2,1.4],
+            'num_leaves': [6, 8, 12, 16],
+            'boosting_type': ['gbdt'],
+            'objective': ['binary'],
+            'random_state': [501],  # Updated from 'seed'
+            'colsample_bytree': [0.65, 0.66],
+            'subsample': [0.7, 0.75],
+            'reg_alpha': [1, 1.2],
+            'reg_lambda': [1, 1.2, 1.4],
             }
 
         minScore = 100
@@ -124,7 +124,7 @@ if __name__ == '__main__':
             # 各検証結果の平均値を算出
             scLogloss = np.mean(listLoglossScore)
             scGini = np.mean(listGiniScore)
-            logger.info('logloss: {}, gini: {}'.format(np.mean(listLoglossScore), np.mean(listGiniScore)))
+            logger.info('logloss Average: {}, gini Average: {}'.format(np.mean(listLoglossScore), np.mean(listGiniScore)))
 
             # giniが小さければ、パラメータを更新する
             if minScore > scGini:
