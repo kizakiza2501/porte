@@ -111,7 +111,7 @@ def objective(trial):
         scGini = eval_gini(val_y, pred)
         listGiniScore.append(scGini)
 
-    return(1 - np.mean(scGini))
+    return(1 - np.mean(listGiniScore))
 
 
 if __name__ == '__main__':
