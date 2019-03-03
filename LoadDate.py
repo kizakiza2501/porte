@@ -3,6 +3,8 @@ from logging import getLogger
 import numpy as np
 import pandas as pd
 
+import lightgbm as lgb
+
 logger = getLogger(__name__)
 
 TRAIN_DATA = 'data/train.csv'
@@ -13,9 +15,19 @@ def readCsv(path):
     logger.info("enter")
     df = pd.read_csv(path)
 
-    # カテゴリ変数をダミー化
-    # カラム名を取得し、「cat」の文字列が含まれるものは対象とする
+    # 重要度の高い項目を残す
+    df = df[['ps_car_13', 'ps_ind_05_cat', 'ps_ind_17_bin', 'ps_reg_03', 'ps_car_07_cat']]
+
+    # -1が存在する行を削除
+    df = df.replace(-1, np.nan)
+    df = df.dropna(how='any')
+
+    df['ps_car_13'] = np.log(df['ps_car_13'])
+    df['ps_reg_03'] = np.log(df['ps_reg_03'])
+
     for col in df.columns.values:
+        # カテゴリ変数をダミー化
+        # カラム名を取得し、「cat」の文字列が含まれるものは対象とする
         if 'cat' in col:
             logger.info('categorical:{}'.format(col))
             # Pandasのget_dumies でエンコード

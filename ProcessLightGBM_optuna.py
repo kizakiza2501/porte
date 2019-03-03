@@ -45,13 +45,23 @@ def objective(trial):
     drop_rate = trial.suggest_uniform('drop_rate', 0, 1.0)
     feature_fraction = trial.suggest_uniform('feature_fraction', 0, 1.0)
     learning_rate = trial.suggest_uniform('learning_rate', 0, 1.0)
-    subsample = trial.suggest_uniform('subsample', 0.8, 1.0)
-    num_leaves = trial.suggest_int('num_leaves', 5, 1000)
+    subsample = trial.suggest_uniform('subsample', 0.7, 1.0)
+    num_leaves = trial.suggest_int('num_leaves', 5, 100)
     verbosity = trial.suggest_int('verbosity', -1, 1)
-    num_boost_round = trial.suggest_int('num_boost_round', 10, 100000)
-    min_data_in_leaf = trial.suggest_int('min_data_in_leaf', 10, 1000)
-    min_child_samples = trial.suggest_int('min_child_samples', 5, 500)
-    min_child_weight = trial.suggest_int('min_child_weight', 5, 500)
+
+#   num_boost_round = trial.suggest_int('num_boost_round', 10, 100000)
+#   min_data_in_leaf = trial.suggest_int('min_data_in_leaf', 10, 1000)
+#   min_child_samples = trial.suggest_int('min_child_samples', 5, 500)
+#   min_child_weight = trial.suggest_int('min_child_weight', 5, 500)
+
+    num_boost_round = trial.suggest_int('num_boost_round', 10, 100)
+    min_data_in_leaf = trial.suggest_int('min_data_in_leaf', 10, 100)
+    min_child_samples = trial.suggest_int('min_child_samples', 5, 100)
+    min_child_weight = trial.suggest_int('min_child_weight', 5, 100)
+
+    colsample_bytree = trial.suggest_uniform('colsample_bytree', 0.65, 0.66)
+    reg_alpha = trial.suggest_uniform('reg_alpha', 1, 1.2)
+    reg_lambda = trial.suggest_uniform('reg_lambda', 1, 1.4)
 
     params = {"objective": "binary",
               "boosting_type": "gbdt",
@@ -68,8 +78,15 @@ def objective(trial):
               "min_split_gain": 0,
               "num_boost_round": num_boost_round,
               "min_data_in_leaf": min_data_in_leaf,
-              "subsample": subsample
+              "subsample": subsample,
+              "n_estimators": 40,
+              "random_state": 501,
+              "colsample_bytree": colsample_bytree,
+              "reg_alpha": reg_alpha,
+              "reg_lambda": reg_lambda
               }
+
+    listGiniScore = []
 
     # トレーニングデータと検証用データに分割する
     for trainIdx, validIdx in cv.split(xTrain, yTrain):
@@ -91,10 +108,10 @@ def objective(trial):
 
         # 検証用データで予測する
         pred = clf.predict_proba(val_x)[:, 1]
-        # Optunaが最小化の最適化を行うため符号を反転する
-        scGini = - eval_gini(val_y, pred)
+        scGini = eval_gini(val_y, pred)
+        listGiniScore.append(scGini)
 
-        return(scGini)
+    return(1 - np.mean(scGini))
 
 
 if __name__ == '__main__':
